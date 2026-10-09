@@ -5,4 +5,3 @@ pytesseract
 matplotlib
 ipykernel
 ipywidgets
-certifi

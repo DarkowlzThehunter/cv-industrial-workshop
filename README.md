@@ -16,7 +16,8 @@ cv-industrial-workshop/
 │   ├── 02_object_counting.ipynb    Workshop 2: นับวัตถุตามสี + กล้อง Basler จำลอง
 │   ├── 02b_emulator_play.ipynb     เล่นกับกล้องจำลอง: AOI, Pixel Format, สายการผลิต, จำลองกล้องจริง
 │   ├── 03_ok_ng_inspection.ipynb   Workshop 2B: ตรวจชิ้นงาน OK / NG
-│   └── 04_ocr.ipynb                Workshop 3: อ่านตัวอักษร (OCR)
+│   ├── 04_ocr.ipynb                Workshop 3: อ่านตัวอักษร (OCR)
+│   └── 05_factory_simulation.ipynb จำลองกะการผลิต 40 ถาด: แสงเปลี่ยน ของเสีย 4 แบบ ต้นทุน
 ├── scripts/                      ← โปรแกรมภาพสด (live view) สำหรับกล้องจริง
 │   ├── vision_camera.py            ต่อกล้อง / แสดงภาพ (ทุก Workshop ใช้ร่วมกัน)
 │   ├── workshop1_image_basics.py
@@ -26,7 +27,9 @@ cv-industrial-workshop/
 ├── images/                       ← ภาพตัวอย่าง
 │   ├── shapes.png
 │   ├── ocr_sample.png
-│   └── line/                       ภาพถาด 6 ถาด สำหรับสายการผลิตจำลอง
+│   ├── line/                       ภาพถาด 6 ถาด สำหรับสายการผลิตจำลอง
+│   ├── factory/                    ภาพถาด 40 ถาด สำหรับจำลองกะการผลิต
+│   └── factory_labels.csv          เฉลยของแต่ละถาด
 └── requirements.txt
 ```
 

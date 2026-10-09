@@ -22,26 +22,6 @@ def img_path(name):
     return name if os.path.exists(name) else os.path.join(IMG_DIR, name)
 
 
-def imread_url(url, timeout=10):
-    """โหลดภาพจาก URL (ต้องเป็นลิงก์ไฟล์ภาพโดยตรง เช่น .jpg / .png) คืนภาพ BGR เหมือน cv2.imread"""
-    import ssl
-    import urllib.request
-    import numpy as np
-    try:
-        import certifi              # Python จาก python.org บน Mac ไม่มีใบรับรอง SSL ในตัว
-        ctx = ssl.create_default_context(cafile=certifi.where())
-    except ImportError:
-        ctx = ssl.create_default_context()
-    # บางเว็บบล็อกโปรแกรมที่ไม่บอกชื่อ browser จึงใส่ User-Agent ไว้
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=timeout, context=ctx) as r:
-        data = r.read()
-    img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
-    if img is None:
-        raise ValueError(f"ข้อมูลจาก {url} ไม่ใช่ไฟล์ภาพ (ลิงก์ต้องชี้ไปที่ไฟล์ภาพโดยตรง)")
-    return img
-
-
 def set_param(cam, names, value):
     """ชื่อ parameter ต่างกันตามรุ่นกล้อง เช่น ExposureTime (รุ่นใหม่) / ExposureTimeAbs (ace classic)"""
     for n in names:
@@ -164,18 +144,13 @@ def fit_to_screen(img, max_w=1600):
 
 def show(*imgs, titles=None, size=6):
     """แสดงภาพใน Jupyter Notebook (แปลง BGR เป็น RGB ให้อัตโนมัติ)"""
-    import logging
     import warnings
     import matplotlib.pyplot as plt
     # ฟอนต์ที่มีภาษาไทย: Windows = Tahoma / Leelawadee UI, Mac = Thonburi
-    # เลือกเฉพาะฟอนต์ไทยที่มีในเครื่องนี้จริง จึงไม่มีข้อความ findfont ... not found
-    from matplotlib import font_manager
-    have = {f.name for f in font_manager.fontManager.ttflist}
-    thai = [f for f in ("Tahoma", "Leelawadee UI", "Thonburi", "Noto Sans Thai") if f in have]
-    plt.rcParams["font.family"] = thai + ["DejaVu Sans"]
+    plt.rcParams["font.family"] = ["Tahoma", "Leelawadee UI", "Thonburi",
+                                   "Noto Sans Thai", "DejaVu Sans"]
     warnings.filterwarnings("ignore", message="Glyph")
     warnings.filterwarnings("ignore", message="findfont")
-    logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)  # findfont มาทาง logging ไม่ใช่ warnings
     n = len(imgs)
     fig, axes = plt.subplots(1, n, figsize=(size * n, size * 0.75))
     axes = [axes] if n == 1 else axes
