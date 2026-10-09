@@ -11,6 +11,7 @@ frame ที่ได้เป็นภาพสี BGR (numpy array) ส่ง�
 import os
 
 import cv2
+import numpy as np
 
 # โฟลเดอร์ images/ ของ repo (ใช้ได้ไม่ว่าจะรันจากโฟลเดอร์ไหน)
 IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "images")
@@ -167,8 +168,11 @@ def show(*imgs, titles=None, size=6):
     import warnings
     import matplotlib.pyplot as plt
     # ฟอนต์ที่มีภาษาไทย: Windows = Tahoma / Leelawadee UI, Mac = Thonburi
-    plt.rcParams["font.family"] = ["Tahoma", "Leelawadee UI", "Thonburi",
-                                   "Noto Sans Thai", "DejaVu Sans"]
+    # เลือกเฉพาะฟอนต์ไทยที่มีในเครื่องนี้จริง จึงไม่มีข้อความ findfont ... not found
+    from matplotlib import font_manager
+    have = {f.name for f in font_manager.fontManager.ttflist}
+    thai = [f for f in ("Tahoma", "Leelawadee UI", "Thonburi", "Noto Sans Thai") if f in have]
+    plt.rcParams["font.family"] = thai + ["DejaVu Sans"]
     warnings.filterwarnings("ignore", message="Glyph")
     warnings.filterwarnings("ignore", message="findfont")
     logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)  # findfont มาทาง logging ไม่ใช่ warnings
@@ -212,3 +216,92 @@ def grab_one(source="emu", image="shapes.png", exposure_us=5000, gain=0):
 def put_label(img, text, org=(10, 30), scale=0.8, color=(0, 255, 255)):
     cv2.putText(img, text, org, cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 0), 4)
     cv2.putText(img, text, org, cv2.FONT_HERSHEY_SIMPLEX, scale, color, 2)
+
+
+# ---------------------------------------------------------------
+# สำหรับ Notebook 02b: เล่นกับกล้องจำลอง
+# ---------------------------------------------------------------
+def grab_emu(image="shapes.png", pixel_format="BGR8Packed",
+             width=None, height=None, offset_x=0, offset_y=0):
+    """ถ่าย 1 ภาพจากกล้องจำลอง พร้อมตั้ง Pixel Format และ AOI (ตัดภาพ) แล้วปิดกล้อง"""
+    os.environ["PYLON_CAMEMU"] = "1"
+    from pypylon import pylon
+    cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+    cam.Open()
+    try:
+        cam.TestImageSelector.Value = "Off"
+        cam.ImageFilename.Value = os.path.abspath(img_path(image))
+        cam.ImageFileMode.Value = "On"
+        cam.PixelFormat.Value = pixel_format
+        # AOI: ต้องตั้ง Offset เป็น 0 ก่อน แล้วค่อยตั้งขนาด และค่อยเลื่อน Offset
+        cam.OffsetX.Value = 0
+        cam.OffsetY.Value = 0
+        cam.Width.Value = width or cam.Width.Max
+        cam.Height.Value = height or cam.Height.Max
+        cam.OffsetX.Value = min(offset_x, cam.OffsetX.Max)
+        cam.OffsetY.Value = min(offset_y, cam.OffsetY.Max)
+        conv = pylon.ImageFormatConverter()
+        conv.OutputPixelFormat = pylon.PixelType_BGR8packed
+        res = cam.GrabOne(3000)
+        try:
+            return conv.Convert(res).GetArray()
+        finally:
+            res.Release()
+    finally:
+        cam.Close()
+
+
+class EmuLine:
+    """สายการผลิตจำลอง: กล้องจำลองส่งภาพจากโฟลเดอร์ทีละภาพ ทุกครั้งที่สั่ง Trigger
+    ใช้แบบ:  line = EmuLine("line")  ->  frame = line.trigger()  ->  line.close()"""
+
+    def __init__(self, folder="line"):
+        os.environ["PYLON_CAMEMU"] = "1"
+        from pypylon import pylon
+        self.pylon = pylon
+        self.cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+        self.cam.Open()
+        self.cam.TestImageSelector.Value = "Off"
+        self.cam.ImageFilename.Value = os.path.abspath(img_path(folder))
+        self.cam.ImageFileMode.Value = "On"
+        self.cam.PixelFormat.Value = "BGR8Packed"
+        # Trigger แบบ Software: กล้องรอคำสั่งก่อนถ่ายทุกภาพ เหมือนรอเซนเซอร์ในไลน์ผลิต
+        self.cam.TriggerSelector.Value = "FrameStart"
+        self.cam.TriggerMode.Value = "On"
+        self.cam.TriggerSource.Value = "Software"
+        self.conv = pylon.ImageFormatConverter()
+        self.conv.OutputPixelFormat = pylon.PixelType_BGR8packed
+        self.cam.StartGrabbing()
+
+    def trigger(self):
+        p = self.pylon
+        self.cam.WaitForFrameTriggerReady(2000, p.TimeoutHandling_ThrowException)
+        self.cam.ExecuteSoftwareTrigger()
+        res = self.cam.RetrieveResult(3000, p.TimeoutHandling_ThrowException)
+        try:
+            return self.conv.Convert(res).GetArray()
+        finally:
+            res.Release()
+
+    def close(self):
+        self.cam.StopGrabbing()
+        self.cam.Close()
+
+
+def simulate_real(img, exposure_ms=5.0, gain_db=0.0, light=1.0, speed=0.0, seed=0):
+    """ทำให้ภาพจากกล้องจำลองเหมือนกล้องจริง (กล้องจำลองไม่เปลี่ยนภาพตาม Exposure / Gain)
+    exposure_ms : เวลาเปิดรับแสง (มิลลิวินาที) มากขึ้น = สว่างขึ้น และเบลอถ้าชิ้นงานเคลื่อนที่
+    gain_db     : ขยายสัญญาณ มากขึ้น = สว่างขึ้น แต่จุดรบกวนมากขึ้น
+    light       : ความสว่างของไฟในห้อง (1.0 = ปกติ)
+    speed       : ความเร็วชิ้นงาน (พิกเซล ต่อ มิลลิวินาที) 0 = อยู่นิ่ง
+    """
+    rng = np.random.default_rng(seed)
+    g = 10 ** (gain_db / 20)
+    x = img.astype(np.float32) * light * (exposure_ms / 5.0) * g
+    blur = int(round(speed * exposure_ms))
+    if blur > 1:
+        k = np.zeros((1, blur), np.float32)
+        k[0, :] = 1.0 / blur
+        x = cv2.filter2D(x, -1, k)
+    x += rng.normal(0, 1.5 + 2.5 * g, x.shape)      # จุดรบกวน ขยายตาม Gain
+    return np.clip(x, 0, 255).astype(np.uint8)

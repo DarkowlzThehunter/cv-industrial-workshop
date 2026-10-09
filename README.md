@@ -14,6 +14,7 @@ cv-industrial-workshop/
 ├── notebooks/                    ← ผู้เรียนใช้ไฟล์ในโฟลเดอร์นี้
 │   ├── 01_image_basics.ipynb       Workshop 1: ภาพคืออะไร (พิกเซล RGB HSV Threshold Canny)
 │   ├── 02_object_counting.ipynb    Workshop 2: นับวัตถุตามสี + กล้อง Basler จำลอง
+│   ├── 02b_emulator_play.ipynb     เล่นกับกล้องจำลอง: AOI, Pixel Format, สายการผลิต, จำลองกล้องจริง
 │   ├── 03_ok_ng_inspection.ipynb   Workshop 2B: ตรวจชิ้นงาน OK / NG
 │   └── 04_ocr.ipynb                Workshop 3: อ่านตัวอักษร (OCR)
 ├── scripts/                      ← โปรแกรมภาพสด (live view) สำหรับกล้องจริง
@@ -24,7 +25,8 @@ cv-industrial-workshop/
 │   └── workshop3_ocr.py
 ├── images/                       ← ภาพตัวอย่าง
 │   ├── shapes.png
-│   └── ocr_sample.png
+│   ├── ocr_sample.png
+│   └── line/                       ภาพถาด 6 ถาด สำหรับสายการผลิตจำลอง
 └── requirements.txt
 ```
 
