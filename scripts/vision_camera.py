@@ -102,7 +102,7 @@ class WebcamSource:
 
 
 class BaslerSource:
-    def __init__(self, emulate=False, image_path=None,
+    def __init__(self, emulate=False, keep_settings=False, image_path=None,
                  exposure_us=5000, gain=0):
         if emulate:
             os.environ["PYLON_CAMEMU"] = "1"     # ต้องตั้งก่อน import pypylon
@@ -138,10 +138,11 @@ class BaslerSource:
                     pass
 
         # concept กล้องอุตสาหกรรม: กำหนดค่าเอง ไม่ปล่อย auto -> ผลซ้ำได้ทุกครั้ง
-        set_param(self.cam, ["ExposureAuto"], "Off")
-        set_param(self.cam, ["ExposureTime", "ExposureTimeAbs"], exposure_us)
-        set_param(self.cam, ["GainAuto"], "Off")
-        set_param(self.cam, ["Gain", "GainRaw"], gain)
+        if not (keep_settings and not emulate):   # keep_settings: ใช้ค่าที่ตั้งไว้ใน pylon Viewer
+            set_param(self.cam, ["ExposureAuto"], "Off")
+            set_param(self.cam, ["ExposureTime", "ExposureTimeAbs"], exposure_us)
+            set_param(self.cam, ["GainAuto"], "Off")
+            set_param(self.cam, ["Gain", "GainRaw"], gain)
 
         # แปลง Bayer / Mono จากกล้อง -> BGR สำหรับ OpenCV
         self.conv = pylon.ImageFormatConverter()

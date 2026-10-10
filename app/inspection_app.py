@@ -23,12 +23,12 @@ for key, val in (('log', []), ('last', None)):
 
 # ---------------- กล้อง: เปิดครั้งเดียวแล้วค้างไว้ (ถ่ายเร็ว) ----------------
 @st.cache_resource(max_entries=1)
-def open_camera(kind, image):
+def open_camera(kind, image, keep=False):
     # เปิดกล้องครั้งเดียว ใช้ต่อทุกครั้งที่ Trigger / Live  (เปลี่ยนแหล่งภาพ = ปิดตัวเก่า เปิดตัวใหม่)
     if kind == 'webcam':
         cam = WebcamSource()
     else:
-        cam = BaslerSource(emulate=(kind == 'emu'), image_path=img_path(image))
+        cam = BaslerSource(emulate=(kind == 'emu'), keep_settings=keep, image_path=img_path(image))
     cam.lock = threading.Lock()      # กันอ่านกล้องพร้อมกันหลายทาง (ภาพสด + Trigger / หลายแท็บ)
     cam.settings = None              # จำค่าที่ตั้งล่าสุด ไม่ต้องเขียนลงกล้องซ้ำทุกภาพ
     return cam
@@ -98,12 +98,23 @@ if source == 'upload':
     uploaded = st.sidebar.file_uploader('เลือกไฟล์ภาพ', type=['png', 'jpg', 'jpeg', 'bmp'])
 
 st.sidebar.subheader('2. กล้อง')
-exposure_ms = st.sidebar.slider('Exposure (มิลลิวินาที)', 0.5, 200.0, 5.0, 0.5)
-gain = st.sidebar.slider('Gain', 0.0, 24.0, 0.0, 1.0)
+keep = False
 if source == 'basler':
-    st.sidebar.caption('ปิด pylon Viewer ก่อนใช้  ภาพมืด: เปิดฝาเลนส์ / หมุนรูรับแสงให้กว้าง / เพิ่มแสง')
+    keep = st.sidebar.checkbox('ใช้ค่ากล้องที่ตั้งไว้ใน pylon Viewer (แนะนำ)', value=True)
+    st.sidebar.caption('ตั้งภาพให้ดีใน pylon Viewer ก่อน (โฟกัส รูรับแสง Exposure White Balance AOI) '
+                       'แล้วปิด pylon Viewer  แอปจะใช้ค่านั้นโดยไม่แก้')
+exposure_ms = st.sidebar.slider('Exposure (มิลลิวินาที)', 0.5, 200.0, 5.0, 0.5, disabled=keep)
+gain = st.sidebar.slider('Gain', 0.0, 24.0, 0.0, 1.0, disabled=keep)
 if source == 'webcam':
     st.sidebar.caption('Mac: ครั้งแรกต้องอนุญาตให้ Terminal ใช้กล้อง (System Settings > Privacy > Camera)')
+if source == 'basler' and st.sidebar.button('White Balance อัตโนมัติ 1 ครั้ง (แก้ภาพติดโทนเขียว)'):
+    try:
+        wb_cam = open_camera(source, image_name, keep)
+        with wb_cam.lock:
+            set_param(wb_cam.cam, ['BalanceWhiteAuto'], 'Once')
+        st.sidebar.success('ปรับ White Balance แล้ว ใช้กับภาพถัดไป')
+    except Exception as e:
+        st.sidebar.error('ปรับไม่ได้: ' + str(e))
 if is_camera and st.sidebar.button('ปิดกล้อง (คืนกล้องให้โปรแกรมอื่น)'):
     open_camera.clear()
     st.sidebar.success('ปิดกล้องแล้ว')
@@ -133,10 +144,11 @@ def get_frame():
         return cv2.imdecode(np.frombuffer(uploaded.getvalue(), np.uint8), cv2.IMREAD_COLOR)
     if source == 'file':
         return cv2.imread(img_path(image_name))
-    cam = open_camera(source, image_name)
+    cam = open_camera(source, image_name, keep)
     try:
         with cam.lock:
-            apply_camera_settings(cam, int(exposure_ms * 1000), gain)
+            if not keep:
+                apply_camera_settings(cam, int(exposure_ms * 1000), gain)
             for _ in range(5):
                 f = cam.read()
                 if f is not None:
@@ -182,7 +194,8 @@ def live_view():
     st.session_state.last = frame
     st.markdown(badge(verdict, n, S['expect'], '   (' + str(round(ms)) + ' ms)'), unsafe_allow_html=True)
     a, b = st.columns(2)
-    a.image(small(out), caption='ภาพสด + ผลการตรวจ  ' + str(frame.shape[1]) + ' x ' + str(frame.shape[0]),
+    a.image(small(out), caption='ภาพสด + ผลการตรวจ  ' + str(frame.shape[1]) + ' x ' + str(frame.shape[0])
+            + '   ความสว่างเฉลี่ย ' + str(int(frame.mean())) + ' / 255',
             width='stretch')
     b.image(small(mask), caption='Mask (สีที่เลือก)', width='stretch')
 
@@ -215,7 +228,10 @@ if frame is not None:
     t0 = time.perf_counter()
     verdict, n, mask, out = inspect(frame, S)
     ms = (time.perf_counter() - t0) * 1000
-    c3.markdown(badge(verdict, n, S['expect']), unsafe_allow_html=True)
+    if live:
+        st.toast('บันทึกผลแล้ว: ' + verdict + '  ' + str(n) + ' / ' + str(S['expect']))
+    else:
+        c3.markdown(badge(verdict, n, S['expect']), unsafe_allow_html=True)
     st.session_state.log.append({
         'เวลา': datetime.now().strftime('%H:%M:%S'), 'แหล่งภาพ': source_label,
         'ภาพ': image_name if source in ('file', 'emu') else '-',
