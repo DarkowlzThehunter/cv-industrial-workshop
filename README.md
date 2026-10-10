@@ -17,19 +17,24 @@ cv-industrial-workshop/
 │   ├── 02b_emulator_play.ipynb     เล่นกับกล้องจำลอง: AOI, Pixel Format, สายการผลิต, จำลองกล้องจริง
 │   ├── 03_ok_ng_inspection.ipynb   Workshop 2B: ตรวจชิ้นงาน OK / NG
 │   ├── 04_ocr.ipynb                Workshop 3: อ่านตัวอักษร (OCR)
-│   └── 05_factory_simulation.ipynb จำลองกะการผลิต 40 ถาด: แสงเปลี่ยน ของเสีย 4 แบบ ต้นทุน
+│   ├── 05_factory_simulation.ipynb จำลองกะการผลิต 40 ถาด: แสงเปลี่ยน ของเสีย 4 แบบ ต้นทุน
+│   ├── 06_industrial_tasks.ipynb   งานโรงงาน 4 แบบ: สิ่งแปลกปลอม ฉลาก นับโลหะ วัดขนาด
+│   ├── 07_ai_classifier.ipynb      ต่อยอดสู่ AI: สอน Image Classifier เทียบกับการเขียนกฎ
+│   ├── 08_product_components.ipynb แยกส่วนประกอบในภาพเดียว (Rack server): ROI map, หาอัตโนมัติ, AI detection
+│   └── 09_challenges.ipynb         Challenge 8 ข้อ: แก้โค้ดเองให้ผ่านตัวตรวจอัตโนมัติ (มีเฉลย)
 ├── scripts/                      ← โปรแกรมภาพสด (live view) สำหรับกล้องจริง
 │   ├── vision_camera.py            ต่อกล้อง / แสดงภาพ (ทุก Workshop ใช้ร่วมกัน)
 │   ├── workshop1_image_basics.py
 │   ├── workshop2_object_counting.py
 │   ├── workshop2b_ok_ng_inspection.py
 │   └── workshop3_ocr.py
-├── app/inspection_app.py        Web app สถานีตรวจชิ้นงาน (Streamlit)
 ├── images/                       ← ภาพตัวอย่าง
 │   ├── shapes.png
 │   ├── ocr_sample.png
 │   ├── line/                       ภาพถาด 6 ถาด สำหรับสายการผลิตจำลอง
 │   ├── factory/                    ภาพถาด 40 ถาด สำหรับจำลองกะการผลิต
+│   ├── industrial/                 ภาพถาด ฉลาก ชิ้นส่วนโลหะ สำหรับ notebook 06
+│   ├── rack/                       ภาพหน้าตู้ Rack server สำหรับ notebook 08
 │   └── factory_labels.csv          เฉลยของแต่ละถาด
 └── requirements.txt
 ```
@@ -229,30 +234,6 @@ python workshop3_ocr.py --source basler
 
 ---
 
-## Web app: สถานีตรวจชิ้นงาน
-
-หน้าจอแบบโปรแกรมจริงสำหรับลองใช้ ไม่ต้องเห็นโค้ด: เลือกแหล่งภาพ ปรับเงื่อนไข กด **Trigger** แล้วเห็นผล OK / NG พร้อมบันทึกผลและดาวน์โหลด CSV
-
-เปิด Terminal ที่โฟลเดอร์ชุด Workshop แล้วพิมพ์
-```
-python -m streamlit run app/inspection_app.py
-```
-(Mac: `python3 -m streamlit run app/inspection_app.py`)  เบราว์เซอร์จะเปิดหน้า http://localhost:8501 ให้เอง  กด Ctrl + C ใน Terminal เพื่อปิด
-
-| แหล่งภาพ | ใช้ทำอะไร |
-|---|---|
-| ภาพตัวอย่าง | ภาพใน images/ รวมถาดสายการผลิตและกะการผลิต |
-| อัปโหลดภาพ | ลองกับภาพชิ้นงานจากโรงงานของตัวเอง |
-| กล้อง Basler จำลอง | ทดลองแบบไม่มีกล้อง |
-| กล้อง Basler จริง | ต่อกล้องจริง (ปิด pylon Viewer ก่อน) |
-| Webcam | ทดลองด้วยกล้องโน้ตบุ๊ก |
-
-มีส่วน **จำลองสภาพโรงงาน** ปรับแสงและความเร็วสายพานได้ เหมือนภารกิจใน notebook 05
-
-> Web app เหมาะกับการเรียน ทดลอง และทำต้นแบบ  สถานีตรวจในไลน์ผลิตจริงที่ต้องตอบสนองเร็วและต่อ PLC มักเป็นโปรแกรมติดตั้งบนเครื่อง (C#, C++ หรือซอฟต์แวร์ของผู้ผลิตกล้อง)
-
----
-
 ## 4. สลับไปใช้กล้องจริง
 
 1. **ปิด pylon Viewer ก่อน** กล้องเปิดได้ทีละโปรแกรม
@@ -274,6 +255,7 @@ python -m streamlit run app/inspection_app.py
 | Mac: `SSL: CERTIFICATE_VERIFY_FAILED` | ดับเบิลคลิก `Install Certificates.command` ในโฟลเดอร์ Applications → Python 3.x |
 | Mac: `externally-managed-environment` | ใช้ Python จาก python.org แทน Python ของ Homebrew แล้วเลือก Kernel ให้ตรง |
 | ไม่มีปุ่ม Select Kernel / Run All | ยังไม่ได้ติดตั้งส่วนเสริม Jupyter ใน VS Code |
+| Mac: `import sklearn` แล้ว error เรื่อง scipy (`dlopen ... __thread_bss`) | `python3 -m pip install scipy==1.11.4` |
 | `ModuleNotFoundError` | ยังไม่ได้ `pip install -r requirements.txt` หรือ Kernel ที่เลือกไม่ตรงกับ Python ที่ติดตั้ง |
 | `ไม่พบกล้อง` | ปิด pylon Viewer / เช็กสาย PoE / ตั้งการ์ดแลนเป็น Auto IP |
 | กล้องค้าง เปิดไม่ได้ | Restart Kernel ใน Notebook หรือปิดโปรแกรมที่ใช้กล้องอยู่ |
