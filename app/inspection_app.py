@@ -1,6 +1,7 @@
 # สถานีตรวจชิ้นงาน (Web app)  รันด้วย:  python3 -m streamlit run app/inspection_app.py
 import os
 import sys
+import threading
 import time
 from datetime import datetime
 
@@ -25,14 +26,19 @@ for key, val in (('log', []), ('last', None)):
 def open_camera(kind, image):
     # เปิดกล้องครั้งเดียว ใช้ต่อทุกครั้งที่ Trigger / Live  (เปลี่ยนแหล่งภาพ = ปิดตัวเก่า เปิดตัวใหม่)
     if kind == 'webcam':
-        return WebcamSource()
-    return BaslerSource(emulate=(kind == 'emu'), image_path=img_path(image))
+        cam = WebcamSource()
+    else:
+        cam = BaslerSource(emulate=(kind == 'emu'), image_path=img_path(image))
+    cam.lock = threading.Lock()      # กันอ่านกล้องพร้อมกันหลายทาง (ภาพสด + Trigger / หลายแท็บ)
+    cam.settings = None              # จำค่าที่ตั้งล่าสุด ไม่ต้องเขียนลงกล้องซ้ำทุกภาพ
+    return cam
 
 
 def apply_camera_settings(cam, exposure_us, gain):
-    if isinstance(cam, BaslerSource):
+    if isinstance(cam, BaslerSource) and cam.settings != (exposure_us, gain):
         set_param(cam.cam, ['ExposureTime', 'ExposureTimeAbs'], exposure_us)
         set_param(cam.cam, ['Gain', 'GainRaw'], gain)
+        cam.settings = (exposure_us, gain)
 
 
 def sample_images():
@@ -128,11 +134,16 @@ def get_frame():
     if source == 'file':
         return cv2.imread(img_path(image_name))
     cam = open_camera(source, image_name)
-    apply_camera_settings(cam, int(exposure_ms * 1000), gain)
-    for _ in range(5):
-        f = cam.read()
-        if f is not None:
-            return f
+    try:
+        with cam.lock:
+            apply_camera_settings(cam, int(exposure_ms * 1000), gain)
+            for _ in range(5):
+                f = cam.read()
+                if f is not None:
+                    return f
+    except Exception:
+        open_camera.clear()          # การเชื่อมต่อหลุด: ปิดแล้วจะเปิดใหม่อัตโนมัติครั้งถัดไป
+        raise RuntimeError('การเชื่อมต่อกล้องหลุด กำลังเชื่อมต่อใหม่ ลองอีกครั้ง')
     raise RuntimeError('ภาพจากกล้องมาไม่ครบ ลองใหม่อีกครั้ง หรือเช็กสาย LAN / PoE')
 
 
@@ -150,7 +161,11 @@ if is_camera:
 st.caption('กด Trigger = ชิ้นงานมาถึง กล้องถ่าย 1 ภาพ ตรวจ แล้วบันทึกผล')
 
 
-@st.fragment(run_every=0.3 if live else None)
+# กล้อง Basler ผ่านสาย 100 Mbps ได้ราว 2 ภาพ/วินาที จึงอัปเดตช้าลง ไม่ให้คำสั่งค้างคิว
+LIVE_EVERY = 1.0 if source == 'basler' else 0.3
+
+
+@st.fragment(run_every=LIVE_EVERY if live else None)
 def live_view():
     if not live:
         return
@@ -160,7 +175,9 @@ def live_view():
         verdict, n, mask, out = inspect(frame, S)
         ms = (time.perf_counter() - t0) * 1000
     except Exception as e:
-        st.error('กล้องมีปัญหา: ' + str(e))
+        st.warning('ภาพนี้ไม่สำเร็จ: ' + str(e))
+        if st.session_state.last is not None:
+            st.image(small(st.session_state.last), caption='ภาพล่าสุดที่สำเร็จ', width='stretch')
         return
     st.session_state.last = frame
     st.markdown(badge(verdict, n, S['expect'], '   (' + str(round(ms)) + ' ms)'), unsafe_allow_html=True)
