@@ -89,6 +89,9 @@ class WebcamSource:
         self.cap = cv2.VideoCapture(index)
         if not self.cap.isOpened():
             raise RuntimeError("เปิด webcam ไม่ได้")
+        # webcam ปรับแสงอัตโนมัติช่วงแรก ภาพแรกๆ จะมืด จึงทิ้งไปก่อน
+        for _ in range(20):
+            self.cap.read()
 
     def read(self):
         ok, frame = self.cap.read()
