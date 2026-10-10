@@ -21,7 +21,10 @@ cv-industrial-workshop/
 │   ├── 06_industrial_tasks.ipynb   งานโรงงาน 4 แบบ: สิ่งแปลกปลอม ฉลาก นับโลหะ วัดขนาด
 │   ├── 07_ai_classifier.ipynb      ต่อยอดสู่ AI: สอน Image Classifier เทียบกับการเขียนกฎ
 │   ├── 08_product_components.ipynb แยกส่วนประกอบในภาพเดียว (Rack server): ROI map, หาอัตโนมัติ, AI detection
-│   └── 09_challenges.ipynb         Challenge 8 ข้อ: แก้โค้ดเองให้ผ่านตัวตรวจอัตโนมัติ (มีเฉลย)
+│   ├── 09_challenges.ipynb         Challenge 8 ข้อ: แก้โค้ดเองให้ผ่านตัวตรวจอัตโนมัติ (มีเฉลย)
+│   └── 10_my_first_project.ipynb   โครงการแรกของฉัน: ใช้รูปจากมือถือ ตรวจชิ้นงานของโรงงานตัวเอง
+├── app/inspection_app.py         ← Web app สถานีตรวจชิ้นงาน (Streamlit)
+├── docs/AI_HELP.md               ← วิธีใช้ AI ช่วยเขียนโค้ดต่อยอด (ตัวอย่างคำถาม)
 ├── scripts/                      ← โปรแกรมภาพสด (live view) สำหรับกล้องจริง
 │   ├── vision_camera.py            ต่อกล้อง / แสดงภาพ (ทุก Workshop ใช้ร่วมกัน)
 │   ├── workshop1_image_basics.py
