@@ -108,6 +108,16 @@ class BaslerSource:
             # กล้องจำลองเริ่มที่ Mono8 (ขาวดำ) -> เปลี่ยนเป็นสี
             set_param(self.cam, ["PixelFormat"], "BGR8Packed")
 
+        if not emulate:
+            # GigE ผ่านอะแดปเตอร์ LAN ทั่วไป (เช่น USB-C บน Mac): ภาพ 5 MP ส่งมาไม่ครบ
+            # แก้โดยเว้นช่วงระหว่าง packet และรอ packet ที่มาช้าได้นานขึ้น
+            set_param(self.cam, ["GevSCPD"], 1000)
+            for name, val in (("FrameRetention", 3000), ("PacketTimeout", 500)):
+                try:
+                    getattr(self.cam.StreamGrabber, name).Value = val
+                except Exception:
+                    pass
+
         # concept กล้องอุตสาหกรรม: กำหนดค่าเอง ไม่ปล่อย auto -> ผลซ้ำได้ทุกครั้ง
         set_param(self.cam, ["ExposureAuto"], "Off")
         set_param(self.cam, ["ExposureTime", "ExposureTimeAbs"], exposure_us)
@@ -229,6 +239,9 @@ def grab_one(source="emu", image="shapes.png", exposure_us=5000, gain=0):
             frame = cam.read()
             if frame is not None:
                 break
+        if frame is None:
+            raise RuntimeError("ถ่ายภาพไม่สำเร็จ 5 ครั้ง: ภาพจากกล้องมาไม่ครบ "
+                               "ลองเช็กสาย LAN / PoE หรือปิดโปรแกรมอื่นที่ใช้กล้องอยู่")
         return frame
     finally:
         cam.close()                 # ปิดกล้องเสมอ แม้เกิด error
