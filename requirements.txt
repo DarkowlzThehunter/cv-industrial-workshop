@@ -6,3 +6,5 @@ matplotlib
 ipykernel
 ipywidgets
 certifi
+streamlit
+pandas

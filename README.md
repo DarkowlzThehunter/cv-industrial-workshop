@@ -24,6 +24,7 @@ cv-industrial-workshop/
 │   ├── workshop2_object_counting.py
 │   ├── workshop2b_ok_ng_inspection.py
 │   └── workshop3_ocr.py
+├── app/inspection_app.py        Web app สถานีตรวจชิ้นงาน (Streamlit)
 ├── images/                       ← ภาพตัวอย่าง
 │   ├── shapes.png
 │   ├── ocr_sample.png
@@ -225,6 +226,30 @@ python workshop2b_ok_ng_inspection.py --source basler --expect 5
 python workshop3_ocr.py --source basler
 ```
 หน้าต่างมีแถบเลื่อนให้ปรับค่า  กด `q` เพื่อออก
+
+---
+
+## Web app: สถานีตรวจชิ้นงาน
+
+หน้าจอแบบโปรแกรมจริงสำหรับลองใช้ ไม่ต้องเห็นโค้ด: เลือกแหล่งภาพ ปรับเงื่อนไข กด **Trigger** แล้วเห็นผล OK / NG พร้อมบันทึกผลและดาวน์โหลด CSV
+
+เปิด Terminal ที่โฟลเดอร์ชุด Workshop แล้วพิมพ์
+```
+python -m streamlit run app/inspection_app.py
+```
+(Mac: `python3 -m streamlit run app/inspection_app.py`)  เบราว์เซอร์จะเปิดหน้า http://localhost:8501 ให้เอง  กด Ctrl + C ใน Terminal เพื่อปิด
+
+| แหล่งภาพ | ใช้ทำอะไร |
+|---|---|
+| ภาพตัวอย่าง | ภาพใน images/ รวมถาดสายการผลิตและกะการผลิต |
+| อัปโหลดภาพ | ลองกับภาพชิ้นงานจากโรงงานของตัวเอง |
+| กล้อง Basler จำลอง | ทดลองแบบไม่มีกล้อง |
+| กล้อง Basler จริง | ต่อกล้องจริง (ปิด pylon Viewer ก่อน) |
+| Webcam | ทดลองด้วยกล้องโน้ตบุ๊ก |
+
+มีส่วน **จำลองสภาพโรงงาน** ปรับแสงและความเร็วสายพานได้ เหมือนภารกิจใน notebook 05
+
+> Web app เหมาะกับการเรียน ทดลอง และทำต้นแบบ  สถานีตรวจในไลน์ผลิตจริงที่ต้องตอบสนองเร็วและต่อ PLC มักเป็นโปรแกรมติดตั้งบนเครื่อง (C#, C++ หรือซอฟต์แวร์ของผู้ผลิตกล้อง)
 
 ---
 

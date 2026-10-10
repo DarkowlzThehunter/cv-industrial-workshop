@@ -10,6 +10,9 @@ frame ที่ได้เป็นภาพสี BGR (numpy array) ส่ง�
 """
 import os
 
+# เปิดกล้องจำลองไว้เสมอ (ไม่กระทบกล้องจริง) จึงสลับ emu กับ basler ได้โดยไม่ต้อง Restart
+os.environ.setdefault('PYLON_CAMEMU', '1')
+
 import cv2
 import numpy as np
 
@@ -46,7 +49,11 @@ def set_param(cam, names, value):
     """ชื่อ parameter ต่างกันตามรุ่นกล้อง เช่น ExposureTime (รุ่นใหม่) / ExposureTimeAbs (ace classic)"""
     for n in names:
         try:
-            getattr(cam, n).Value = value
+            node = getattr(cam, n)
+            try:
+                node.Value = value
+            except Exception:
+                node.Value = int(round(value))   # บางรุ่นรับเฉพาะจำนวนเต็ม เช่น GainRaw
             print(f"  ตั้ง {n} = {value}")
             return True
         except Exception:
@@ -54,6 +61,15 @@ def set_param(cam, names, value):
     print(f"  (ข้าม {names[0]} - กล้องรุ่นนี้ไม่มี parameter นี้)")
     return False
 
+
+def pick_device(pylon, emulate):
+    """เลือกกล้องจำลองหรือกล้องจริงตามที่ขอ แม้จะมีทั้งสองแบบต่ออยู่"""
+    tl = pylon.TlFactory.GetInstance()
+    devs = [d for d in tl.EnumerateDevices()
+            if (d.GetDeviceClass() == 'BaslerCamEmu') == emulate]
+    if not devs:
+        raise RuntimeError('ไม่พบกล้อง - เช็กสาย PoE / ปิด pylon Viewer ก่อน / ตั้งการ์ดแลนเป็น Auto IP')
+    return tl.CreateDevice(devs[0])
 
 class FileSource:
     def __init__(self, path):
@@ -91,7 +107,7 @@ class BaslerSource:
         self.pylon = pylon
 
         try:
-            device = pylon.TlFactory.GetInstance().CreateFirstDevice()
+            device = pick_device(pylon, emulate)
         except Exception:
             raise RuntimeError(
                 "ไม่พบกล้อง - เช็กสาย PoE / ปิด pylon Viewer ก่อน / ตั้งการ์ดแลนเป็น Auto IP")
@@ -260,7 +276,7 @@ def grab_emu(image="shapes.png", pixel_format="BGR8Packed",
     """ถ่าย 1 ภาพจากกล้องจำลอง พร้อมตั้ง Pixel Format และ AOI (ตัดภาพ) แล้วปิดกล้อง"""
     os.environ["PYLON_CAMEMU"] = "1"
     from pypylon import pylon
-    cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+    cam = pylon.InstantCamera(pick_device(pylon, True))
     cam.Open()
     try:
         cam.TestImageSelector.Value = "Off"
@@ -293,7 +309,7 @@ class EmuLine:
         os.environ["PYLON_CAMEMU"] = "1"
         from pypylon import pylon
         self.pylon = pylon
-        self.cam = pylon.InstantCamera(pylon.TlFactory.GetInstance().CreateFirstDevice())
+        self.cam = pylon.InstantCamera(pick_device(pylon, True))
         self.cam.Open()
         self.cam.TestImageSelector.Value = "Off"
         self.cam.ImageFilename.Value = os.path.abspath(img_path(folder))
