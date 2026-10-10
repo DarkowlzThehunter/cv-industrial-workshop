@@ -26,6 +26,7 @@ cv-industrial-workshop/
 ├── app/inspection_app.py         ← Web app สถานีตรวจชิ้นงาน (Streamlit)
 ├── docs/AI_HELP.md               ← วิธีใช้ AI ช่วยเขียนโค้ดต่อยอด (ตัวอย่างคำถาม)
 ├── docs/GLOSSARY.md              ← คำย่อและคำศัพท์ที่ควรรู้ (★ = อยู่ในแบบทดสอบ)
+├── docs/REAL_CAMERA_AND_WEBAPP.md ← ต่อกล้องจริง ข้อจำกัด และรัน Web app บน localhost
 ├── scripts/                      ← โปรแกรมภาพสด (live view) สำหรับกล้องจริง
 │   ├── vision_camera.py            ต่อกล้อง / แสดงภาพ (ทุก Workshop ใช้ร่วมกัน)
 │   ├── workshop1_image_basics.py
